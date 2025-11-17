@@ -1,0 +1,37 @@
+name: Build Kivy APK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip buildozer git openjdk-11-jdk unzip
+          pip install --upgrade pip Cython==0.29.33
+          pip install kivy
+
+      - name: Download Android SDK & NDK
+        run: |
+          sudo apt install -y android-sdk android-sdk-platform-tools
+          export ANDROIDSDK=/usr/lib/android-sdk
+          export ANDROIDNDK=$ANDROIDSDK/ndk-bundle
+
+      - name: Build APK
+        run: |
+          buildozer android debug
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: APK-Kalkulator-Trafo
+          path: bin/*.apk
