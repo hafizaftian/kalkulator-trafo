@@ -2,36 +2,51 @@ name: Build Kivy APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y python3-pip buildozer git openjdk-11-jdk unzip
-          pip install --upgrade pip Cython==0.29.33
-          pip install kivy
+    - name: Install OS dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          build-essential \
+          git \
+          zip \
+          unzip \
+          openjdk-17-jdk \
+          python3-pip \
+          autoconf \
+          libtool \
+          pkg-config
 
-      - name: Download Android SDK & NDK
-        run: |
-          sudo apt install -y android-sdk android-sdk-platform-tools
-          export ANDROIDSDK=/usr/lib/android-sdk
-          export ANDROIDNDK=$ANDROIDSDK/ndk-bundle
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install buildozer cython virtualenv
 
-      - name: Build APK
-        run: |
-          buildozer android debug
+    - name: Install Android SDK
+      run: |
+        sudo mkdir -p /usr/lib/android-sdk
+        sudo chown $USER:$USER /usr/lib/android-sdk
+        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+        unzip commandlinetools-linux-9477386_latest.zip -d /usr/lib/android-sdk/cmdline-tools
+        mv /usr/lib/android-sdk/cmdline-tools/cmdline-tools /usr/lib/android-sdk/cmdline-tools/latest
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: APK-Kalkulator-Trafo
-          path: bin/*.apk
+        yes | /usr/lib/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/lib/android-sdk "platform-tools" "platforms;android-33" "build-tools;33.0.2" "ndk;25.1.8937393"
+
+    - name: Set environment variables
+      run: |
+        echo "export ANDROIDSDK=/usr/lib/android-sdk" >> $GITHUB_ENV
+        echo "export ANDROIDNDK=/usr/lib/android-sdk/ndk/25.1.8937393" >> $GITHUB_ENV
+        echo "export PATH=$PATH:/usr/lib/android-sdk/platform-tools" >> $GITHUB_ENV
+
+    - name: Build APK
+      run: |
+        buildozer
